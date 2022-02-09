@@ -1,6 +1,5 @@
 import twitter
 import sqlite3
-import kyodaishiki.__shell__ as ksh
 import docopt
 import re
 import json
@@ -151,69 +150,3 @@ class Command:
 	LIST=("LS","LIST")
 	SET=["SET"]
 
-class Shell(ksh.BaseShell3):	
-	def __init__(self,db):
-		self.db=db
-		self.botdb=BotDB(db)
-		self.cur=db.cursor()
-		self.current_name=None
-		self.current_bot=None
-		super().__init__()
-		self.botdb.createTable()
-	def _execQuery(self,query,output):
-		if query.command in Command.HELP:
-			print(Docs.HELP,file=output)
-		elif query.command in Command.APPEND:
-		#append <botname> <consmer_key> <consumer_secret> <token> <token_secret>
-			args=docopt.docopt(Docs.APPEND,query.args)
-			name=args["<botname>"]
-			consumer_key=args["<consumer_key>"]
-			consumer_token=args["<consumer_secret>"]
-			token=args["<token>"]
-			token_secret=args["<token_secret>"]
-			self.botdb.append(name,consumer_key,consumer_token,token,token_secret)
-			self.botdb.db.commit()
-		elif query.command in Command.REMOVE:
-			args=docopt.docopt(Docs.REMOVE,query.args)
-			name=args["<name>"]
-			self.db.remove(name)
-		elif query.command in Command.GET:
-			args=docopt.docopt(Docs.GET,query.args)
-			name=args["<bot_name>"]
-			data=self.botdb._get(name)
-			print(json.dumps(data,indent=2),file=output)
-		elif query.command in Command.LIST:
-			args=docopt.docopt(Docs.LIST,query.args)
-			sname=args["<name>"] or ""
-			for name in self.botdb.list_name():
-				if re.match(sname,name):
-					print(name,file=output)
-		elif query.command in Command.SET:
-			args=docopt.docopt(Docs.SET,query.args)
-			if args["bot"]:
-				name=args["<name>"]
-				bot=self.botdb.get(name)
-				if not bot:
-					print('"{0} doesn\'t exist."'.format(name),file=output)
-					return
-				self.current_bot=bot
-				self.current_name=name
-				print("Setted bot data.",file=output)
-		else:
-			return super().execQuery(query,output)
-	def execQuery(self,query,output):
-		try:
-			return self._execQuery(query,output)
-		except KeyboardInterrupt:
-			pass
-		except SystemExit as e:
-			print(e)
-	def close(self):
-		super().close()
-		self.db.close()
-
-if __name__ == "__main__":
-#t=getbot()
-#t.statuses.update(status="Hello,World!")
-	with Shell(sqlite3.connect("a.db")) as sh:
-		sh.start()
